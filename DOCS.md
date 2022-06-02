@@ -219,29 +219,6 @@ company = linkedin.get_company('linkedin')
 ```
 
 ---
-<a name="get_job_posting"></a>
-
-### linkedin.get_job_posting(job_urn_id)
-
-Returns job posting details. The job_urn_id can be found in the "jobPosting" fields in the response of a [`linkedin.search`](#search) for job postings, (i.e, with query param decoration_id=com.linkedin.voyager.deco.jobs.web.shared.WebFullJobPosting-39).
-
-**Arguments**
-
-- `job_urn_id <str>` - job id, e.g: '1792209257'
-
-**Return**
-
-- `<dict>`
-
-**Example**
-
-```python
-linkedin = Linkedin(credentials['username'], credentials['password'])
-
-job_posting = linkedin.get_job_posting('1754968923")
-```
-
----
 
 <a name="search"></a>
 
