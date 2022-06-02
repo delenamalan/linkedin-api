@@ -30,15 +30,14 @@ def linkedin():
 
 def test_get_profile(linkedin):
     profile = linkedin.get_profile(urn_id=TEST_PROFILE_ID)
+
     assert profile
-    assert profile["summary"]
-    assert profile["summary"][0] == "👋"
 
 
-# def test_view_profile(linkedin):
-#     err = linkedin.view_profile(TEST_PUBLIC_PROFILE_ID)
+def test_view_profile(linkedin):
+    err = linkedin.view_profile(TEST_PUBLIC_PROFILE_ID)
 
-#     assert not err
+    assert not err
 
 
 def test_get_profile_privacy_settings(linkedin):
@@ -126,33 +125,70 @@ def test_search(linkedin):
     assert results
 
 
+def test_search_pagination(linkedin):
+    results = linkedin.search({"keywords": "software"}, limit=4)
+    # according to implementation of functions search_people, search_companies
+    # limit is valid within the category only. So in every category/type of test
+    # the number of results shall not exceed a given limit
+    numbers_in_categories = dict()
+    for result in results:
+        try:
+            occurrence = numbers_in_categories[result["type"]]
+        except KeyError:
+            occurrence = 0
+            numbers_in_categories.update({result["type"]: occurrence})
+        occurrence += 1
+        numbers_in_categories[result["type"]] = occurrence
+    assert results
+    assert max(numbers_in_categories.values()) == 4
+
+
 def test_search_with_limit(linkedin):
     results = linkedin.search({"keywords": "tom"}, limit=1)
     assert len(results) == 1
 
 
 def test_search_people(linkedin):
-    results = linkedin.search_people(keywords="software")
+    results = linkedin.search_people(keywords="software", include_private_profiles=True)
     assert results
-    assert results[0]["public_id"]
 
 
 def test_search_people_with_limit(linkedin):
-    results = linkedin.search_people(keywords="software", limit=1)
+    results = linkedin.search_people(
+        keywords="software", include_private_profiles=True, limit=1
+    )
     assert results
     assert len(results) == 1
 
 
 def test_search_people_by_region(linkedin):
-    results = linkedin.search_people(keywords="software", regions=["au:4910"])
+    results = linkedin.search_people(
+        keywords="software", include_private_profiles=True, regions=["105080838"]
+    )
     assert results
-    assert results[0]["public_id"]
+
+
+def test_search_people_by_keywords_filter(linkedin: Linkedin):
+    results = linkedin.search_people(
+        keyword_first_name="John",
+        keyword_last_name="Smith",
+        include_private_profiles=True,
+    )
+    assert results
+
+
+def test_search_jobs(linkedin):
+    jobs = linkedin.search_jobs(
+        keywords="data analyst", location_name="Germany", limit=1
+    )
+
+    assert jobs
 
 
 def test_search_companies(linkedin):
     results = linkedin.search_companies(keywords="linkedin", limit=1)
     assert results
-    assert results[0]["urn_id"] == 1337
+    assert results[0]["urn_id"] == "1337"
 
 
 # def test_search_people_distinct(linkedin):
@@ -181,7 +217,6 @@ def test_accept_invitation(linkedin):
         # If we've got no invitations, just force test to pass
         assert True
         return
-
     num_invitations = len(invitations)
     invite = invitations[0]
     invitation_response = linkedin.reply_invitation(
@@ -205,7 +240,6 @@ def test_reject_invitation(linkedin):
         # If we've got no invitations, just force test to pass
         assert True
         return
-
     num_invitations = len(invitations)
     invite = invitations[0]
     invitation_response = linkedin.reply_invitation(
@@ -217,3 +251,35 @@ def test_reject_invitation(linkedin):
 
     invitations = linkedin.get_invitations()
     assert len(invitations) == num_invitations - 1
+
+
+def test_unfollow_entity(linkedin):
+    urn = f"urn:li:member:ACoAACVmHBkBdk3IYY1uodl8Ht4W79rmdVFccOA"
+    err = linkedin.unfollow_entity(urn)
+    assert not err
+
+
+def test_get_feed_posts_pagination(linkedin):
+    results = linkedin.get_feed_posts(101)
+    assert results
+
+
+def test_get_feed_posts_pagination_with_limit(linkedin):
+    results = linkedin.get_feed_posts(4)
+    # Currently promotions are always removed from results
+    assert len(results) <= 4
+
+
+def test_get_feed_posts_posts_keys(linkedin):
+    results = linkedin.get_feed_posts(4)
+    for i in results:
+        assert i["author_name"]
+        assert i["author_profile"]
+        assert i["content"]
+        assert i["old"]
+        assert i["url"]
+
+
+def test_get_feed_posts_urns_contains_no_duplicated(linkedin):
+    l_posts, l_urns = linkedin._get_list_feed_posts_and_list_feed_urns(101)
+    assert len(set([x for x in l_urns if l_urns.count(x) > 1])) == 0
